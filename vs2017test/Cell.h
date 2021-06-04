@@ -20,6 +20,7 @@ class Cell
 		int row, column;
 		int h; // heuristic
 		int g; // distance from source
+		int f; // f = g + h
 		int t_r;	// target row
 		int t_c;	// target column
 		Cell* parent;
@@ -29,7 +30,10 @@ class Cell
 
 	public:
 		// Constructors
+		Cell();
+		Cell(Cell* other);
 		Cell(int r, int c, Cell* p, int t_r, int t_c);
+		~Cell();
 
 		// Getters
 		int GetH() { return h; }
@@ -39,16 +43,20 @@ class Cell
 		Cell* GetParent() { return parent; }
 		bool IsCoin() { return isCoin; }
 		int GetIdentity() { return identity; }
+		double GetSafeDistance() { return safeDistance; }
+		int GetF() { return f; }
 
 		// Setters
-		void SetH(int h) { h = h; }
-		void SetG(int g) { g = g; }
-		void SetParent(Cell* parent) { parent = parent; }
-		void SetRow(int r) { row = r; }
-		void SetColumn(int c) { column = c; }
+		void SetH(int h) { this->h = h; SetF(); }
+		void SetG(int g) { this->g = g; SetF(); }
+		void SetParent(Cell* parent) { this->parent = parent; }
+		void SetRow(int r) { this->row = r; }
+		void SetColumn(int c) { this->column = c; }
 		int CalculateH();
 		int CalculateG();
-		void SetCoin(bool flag) { identity = flag; }
-		void SetIdentity(int identity) { identity = identity; }
+		void SetCoin(bool flag) { this->isCoin = flag; }
+		void SetIdentity(int identity) { this->identity = identity; }
+		void SetSafeDistance(double safeDistance) { this->safeDistance = safeDistance; }
+		void SetF() { this->f = GetG() + GetH(); }
 };
 

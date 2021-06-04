@@ -2,6 +2,23 @@
 #include <stdlib.h>
 
 // Constructor with H and G
+Cell::Cell()
+{
+	SetIdentity(SPACE);
+	SetParent(nullptr);
+}
+
+Cell::Cell(Cell* other)
+{
+	SetIdentity(other->GetIdentity());
+	SetRow(other->GetRow());
+	SetColumn(other->GetColumn());
+	if (other->GetParent() == nullptr)
+		SetParent(nullptr);
+	else
+		SetParent(new Cell(other->GetParent()));
+}
+
 Cell::Cell(int r, int c, Cell* p, int t_r, int t_c)
 {
 	this->row = r;
@@ -13,6 +30,8 @@ Cell::Cell(int r, int c, Cell* p, int t_r, int t_c)
 	this->g = CalculateG(); // Calculate G based on parent row and column
 
 }
+
+Cell::~Cell() {};
 
 int Cell::CalculateH()
 {
