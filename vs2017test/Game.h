@@ -276,19 +276,19 @@ public:
 					glColor3d(0.5, 0.5, 0.5); // Grey
 					break;
 				case PACMAN:
-					glColor3d(0.9, 0.9, 0); // Yellow
+					glColor3d(1, 1, 0); // Yellow
 					break;
 				case TARGET:
 					glColor3d(1, 0, 0); // Red
 					break;
 				case GHOST_1:
-					glColor3d(0.5, 0.5, 1); // Cyan
+					glColor3d(0.5, 0.1, 1); // Purple
 					break;
 				case GHOST_2:
-					glColor3d(0.5, 0.5, 1); // Cyan
+					glColor3d(0.5, 0.1, 1); // Purple
 					break;
 				case GHOST_3:
-					glColor3d(0.5, 0.5, 1); // Cyan
+					glColor3d(0.5, 0.1, 1); // Purple
 					break;
 				}
 				// Draw square -> maze[i][j]
