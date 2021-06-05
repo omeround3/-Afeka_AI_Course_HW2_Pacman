@@ -260,7 +260,7 @@ bool Game::IsGhost(int ghostValue)
 }
 
 // A function to check the neighbor cells
-void Game::CheckNeighbors(int horizontalOffset, int verticalOffset, Cell* temp, int ghostValue, int ghostNumber)
+void Game::CheckNeighbors(int horizontalOffset, int verticalOffset, Cell* temp, int cellIdentity, int ghostNumber)
 {
 	Cell* otherTemp;
 
@@ -274,20 +274,20 @@ void Game::CheckNeighbors(int horizontalOffset, int verticalOffset, Cell* temp, 
 	// Also, verify the Cell is not a Ghost
 	if (otherTemp->GetIdentity() != WALL && graysIterator == graysVector.end() && blacksIterator == blacksVector.end() && !IsGhost(otherTemp->GetIdentity()))
 	{
-		// Set the Neighboring Cell's parent to the Ghost
+		// Set the Neighboring Cell's parent
 		otherTemp->SetParent(temp);
 		// Push the Neighboring Cell to the grays Vector
 		graysVector.push_back(otherTemp);
 		// Set the Neighboring Cell G to the Ghost's G + some step penalty
 		otherTemp->SetG(temp->GetG() + STEP_PENALTY);
-		if (IsGhost(ghostValue))
+		if (IsGhost(cellIdentity))
 		{
 			// Set the Neighboring Cell H to the Distance between the Ghost
 			// and the Neighboring Cell
 			otherTemp->SetH(Distance(ghosts[ghostNumber], otherTemp));
 			ghostsPQ.push(otherTemp); // Push Neighbor to ghosts Priorty Queue
 		}
-		else if (ghostValue == PACMAN)
+		else if (cellIdentity == PACMAN)
 		{
 			// if the value is Pacman, set the H to the Distance between pacman and the neighbor
 			otherTemp->SetH(Distance(pacman, otherTemp));
@@ -303,6 +303,7 @@ void Game::MovePacman(Cell* target)
 	// Push pacman Cell to the pacman Priorty Queue
 	pacmanPQ.push(pacman);
 
+	// A Star algorithm implementation to find the shortest path from Pacman to a target (coin) cell
 	while (!pacmanPQ.empty())
 	{
 		temp = pacmanPQ.top();
@@ -322,20 +323,21 @@ void Game::MovePacman(Cell* target)
 		CheckNeighbors(-1, 0, temp, PACMAN, 0);
 		CheckNeighbors(1, 0, temp, PACMAN, 0);
 	}
-
+	// Restore the best path found and get the next cell to move to
 	while (true)
 	{
 		temp = temp->GetParent();
 		if (temp->GetParent()->GetIdentity() == PACMAN)
 			break;
 	}
+	// Change the identity of the new cell to the PACMAN and set the coin flag to false
 	temp->SetIdentity(PACMAN);
 	if (temp->IsCoin())
 		temp->SetCoin(false);
 
 	pacman = temp;
 	temp = temp->GetParent();
-
+	// "Paint" the Pacman's previous cell with SPACE
 	maze[temp->GetRow()][temp->GetColumn()]->SetIdentity(SPACE);
 
 	if (Distance(pacman, target) == 1)
@@ -346,11 +348,9 @@ void Game::MovePacman(Cell* target)
 		if (pacmanPoints == NUM_OF_COINS)
 			pacmanWon = true;
 	}
-
+	// Clear vectors
 	blacksVector.clear();
 	graysVector.clear();
-
-
 }
 
 
@@ -359,7 +359,8 @@ void Game::MoveGhost(int ghostNumber, int ghostValue)
 {
 	Cell* temp = nullptr;
 
-	// Pop a ghost from the ghosts Priorty Queue and check its neighbors
+	// A Star algorithm implementation to find the shortest path from Ghost number <ghostNumber>
+	// to Pacman
 	while (!ghostsPQ.empty())
 	{
 		temp = ghostsPQ.top();
@@ -382,21 +383,21 @@ void Game::MoveGhost(int ghostNumber, int ghostValue)
 		CheckNeighbors(-1, 0, temp, ghostValue, ghostNumber);
 		CheckNeighbors(1, 0, temp, ghostValue, ghostNumber);
 	}
-
+	// Restore the best path found and get the next cell to move to
 	while (true)
 	{
 		temp = temp->GetParent();
 		if (temp->GetParent()->GetIdentity() == ghostValue)
 			break;
 	}
+	// Change the identity of the new cell to the ghostValue
 	temp->SetIdentity(ghostValue);
-
+	// Insert new Ghost Cell to Cell's array
 	ghosts[ghostNumber] = temp;
 	temp = temp->GetParent();
-
-
+	// "Paint" the Ghost's previous cell with SPACE
 	maze[temp->GetRow()][temp->GetColumn()]->SetIdentity(SPACE);
-
+	// Clear vectors
 	blacksVector.clear();
 	graysVector.clear();
 }
@@ -473,7 +474,7 @@ void Game::PlayGhost(Cell* character, int ghostNumber, int ghostValue)
 	// Calculate the distance between a Ghost to Pacman
 	double distance = Distance(character, pacman);
 	// If the distance equals 1, the Ghosts won the game
-	if (distance == 1)
+	if (distance >= 1 && distance < 1.45)
 	{
 		ghostsWon = true;
 		cout << "The Ghosts won the game! Pacman is dead. Numbers of Steps: " << this->GetSteps() << endl;
@@ -516,7 +517,6 @@ void Game::PlayPacman()
 	oldTarget = target;
 
 	pacmanVector.clear();
-	markedCells.clear();
 	while (!pacmanPQ.empty())
 		pacmanPQ.pop();
 	while (!safeDistancePQ.empty())
