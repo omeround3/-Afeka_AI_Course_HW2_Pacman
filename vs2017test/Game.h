@@ -338,9 +338,40 @@ public:
 	//	}
 	//}
 
-	// A function to calculate the Distance between two Cells
+	
+	bool IsGhost(int value)
+	{
+		if (value == GHOST_1 || value == GHOST_2 || value == GHOST_3)
+			return true;
+		return false;
+	}
 
-	void movePacman(Cell* target)
+	void checkSide(int horizontalOffset, int verticalOffset, Cell* temp, int value, int ghostNumber)
+	{
+		Cell* otherTemp;
+
+		otherTemp = maze[temp->GetRow() + horizontalOffset][temp->GetColumn() + verticalOffset];
+		blacksIterator = find(blacksVector.begin(), blacksVector.end(), otherTemp);
+		graysIterator = find(graysVector.begin(), graysVector.end(), otherTemp);
+		if (otherTemp->GetIdentity() != WALL && graysIterator == graysVector.end() && blacksIterator == blacksVector.end() && !IsGhost(otherTemp->GetIdentity()))
+		{
+			otherTemp->SetParent(temp);
+			graysVector.push_back(otherTemp);
+			otherTemp->SetG(temp->GetG() + STEP_PENALTY);
+			if (IsGhost(value))
+			{
+				otherTemp->SetH(Distance(ghosts[ghostNumber], otherTemp));
+				ghostsPQ.push(otherTemp);
+			}
+			else if (value == PACMAN)
+			{
+				otherTemp->SetH(Distance(pacman, otherTemp));
+				pacmanPQ.push(otherTemp);
+			}
+		}
+	}
+
+	void MovePacman(Cell* target)
 	{
 		Cell* temp = nullptr;
 		pacmanPQ.push(pacman);
@@ -382,7 +413,7 @@ public:
 		{
 			target->SetCoin(false);
 			pacmanPoints += 1;
-			cout << "Yey! Pacman ete one coin and won " << pacmanPoints * 100 << " points" << endl;
+			cout << "Pacman found food and got " << pacmanPoints * 100 << " points" << endl;
 			if (pacmanPoints == NUM_OF_COINS)
 				pacmanWon = true;
 		}
@@ -393,6 +424,48 @@ public:
 
 	}
 
+	void moveGhost(int i, int value)
+	{
+		Cell* temp = nullptr;
+
+		while (!ghostsPQ.empty())
+		{
+			temp = ghostsPQ.top();
+			ghostsPQ.pop();
+
+			if (temp->GetIdentity() == PACMAN)
+				break;
+
+			graysIterator = find(graysVector.begin(), graysVector.end(), temp);
+			if (graysIterator != graysVector.end())
+				graysVector.erase(graysIterator);
+			blacksVector.push_back(temp);
+
+			checkSide(0, -1, temp, value, i);
+			checkSide(0, 1, temp, value, i);
+			checkSide(-1, 0, temp, value, i);
+			checkSide(1, 0, temp, value, i);
+		}
+
+		while (true)
+		{
+			temp = temp->GetParent();
+			if (temp->GetParent()->GetIdentity() == value)
+				break;
+		}
+		temp->SetIdentity(value);
+
+		ghosts[i] = temp;
+		temp = temp->GetParent();
+
+
+		maze[temp->GetRow()][temp->GetColumn()]->SetIdentity(SPACE);
+
+		blacksVector.clear();
+		graysVector.clear();
+	}
+
+	// A function to calculate the Distance between two Cells
 	double Distance(Cell* n1, Cell* n2)
 	{
 		int x1 = n1->GetRow();
@@ -416,10 +489,10 @@ public:
 		return risk;
 	}
 
-	void coinsValue()
+	void CoinsValue()
 	{
 		int i, j;
-		double safety;
+		double safeDistance;
 		bool foundCoin = false;
 		for (i = 0; i < MSZ; i++)
 		{
@@ -428,32 +501,53 @@ public:
 				if (maze[i][j]->IsCoin())
 				{
 					foundCoin = true;
-					safety = assertSafety(maze[i][j]);
-					maze[i][j]->SetSafeDistance(safety);
+					safeDistance = assertSafety(maze[i][j]);
+					maze[i][j]->SetSafeDistance(safeDistance);
 					safeDistancePQ.push(maze[i][j]);
 				}
 			}
 		}
 
 		if (!foundCoin)
+		{
 			pacmanWon = true;
+			cout << "PACMAN WON THE GAME! Yey!" << endl;
+		}
+	}
+
+	void PlayGhost(Cell* character, int i, int ghostValue)
+	{
+		double distance = Distance(character, pacman);
+		if (distance == 1)
+		{
+			ghostsWon = true;
+			return;
+		}
+		if (ghostsWon)
+			return;
+		character->SetH(distance);
+		ghostsPQ.push(character);
+		moveGhost(i, ghostValue);
+		while (!ghostsPQ.empty())
+			ghostsPQ.pop();
+
 	}
 
 	void PlayPacman(Cell* character)
 	{
 		Cell* target, * oldTarget = nullptr;
 		pacmanVector.push_back(pacman);
-		coinsValue();
+		CoinsValue();
 		if (pacmanWon)
 			return;
 		target = safeDistancePQ.top();
 		if (oldTarget != nullptr)
 		{
 			if (target->GetSafeDistance() < oldTarget->GetSafeDistance())
-				movePacman(oldTarget);
+				MovePacman(oldTarget);
 		}
 		else
-			movePacman(target);
+			MovePacman(target);
 		oldTarget = target;
 
 		pacmanVector.clear();
