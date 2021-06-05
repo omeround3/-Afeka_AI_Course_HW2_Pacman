@@ -1,13 +1,5 @@
 #include "Game.h"
 
-
-
-
-// Functions
-//double Distance(Cell* n1, Cell* n2);
-//void fixMaze();
-
-
 bool fairGame = true;
 
 // Game Constructor

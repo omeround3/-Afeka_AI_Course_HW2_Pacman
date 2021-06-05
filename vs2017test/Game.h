@@ -10,9 +10,9 @@
 using namespace std;
 
 // Declare constant variables
-const int W = 400;
-const int H = 400;
-const int MSZ = 100; // Maze size
+const int W = 1000;
+const int H = 1000;
+const int MSZ = 50; // Maze size
 const int NUM_NODES = 200;
 const int NUM_OF_COINS = 6;
 const int NUM_OF_GHOSTS = 3;
@@ -103,7 +103,7 @@ public:
 			maze[i][MSZ - 1]->SetIdentity(WALL);
 		}
 
-		// Setting cells which are not on the border of the maze to SPACE or WALL based on even/odd line number
+		// Setting cells which are not on the border of the maze to SPACE or WALL based on even/odd row number
 		for (i = 1; i < MSZ - 1; i++)
 			for (j = 1; j < MSZ - 1; j++)
 			{
@@ -126,13 +126,14 @@ public:
 			j = rand() % MSZ;
 		} while (maze[i][j]->GetIdentity() != SPACE);
 		maze[i][j]->SetIdentity(PACMAN);
-		pacman = new Cell(maze[i][j]);
+		pacman = new Cell(maze[i][j]); 
 		pacmanVector.push_back(pacman);
 
 		//pqA_star.push(start); // the start cell for A Star priority queue
 	}
 
-	void recolorMaze()
+	// A function to chnage the Maze BLACK Cells to SPACE and SPACE to WALL
+	void ChangeColorMaze()
 	{
 		int i;
 		int j;
@@ -151,7 +152,8 @@ public:
 			}
 	}
 
-	void addCoins()
+	// A function to add the Pacman food (coins) to the maze
+	void AddFood()
 	{
 		int i, j, k;
 		for (k = 0; k < NUM_OF_COINS; k++)
@@ -165,7 +167,8 @@ public:
 		}
 	}
 
-	void addEnemies()
+	// This functions add the Monsters to the Maze
+	void AddMonsters()
 	{
 		int i, j, k;
 		for (k = 0; k < NUM_OF_GHOSTS; k++)
@@ -185,6 +188,7 @@ public:
 		}
 	}
 
+	// A function to count the number of spaces in the Maze
 	int numOfSpaces()
 	{
 		int i, j;
@@ -196,6 +200,7 @@ public:
 		return counter;
 	}
 
+	// This functions cleans the Maze and sets all the Cells to SPACE
 	void cleanMaze()
 	{
 		int i, j;
@@ -210,16 +215,16 @@ public:
 
 		if (pacmanVector.empty())
 		{
-			if (numOfSpaces() < NUM_OF_COINS + NUM_OF_GHOSTS + 20)
+			if (numOfSpaces() < NUM_OF_COINS + NUM_OF_GHOSTS + 30)
 			{
-				cout << "Bad maze." << numOfSpaces() << endl;
+				cout << "An incorrect maze was created. Drawing another maze." << numOfSpaces() << endl;
 				cleanMaze();
 				InitMaze();
 			}
 			fairGame = false;
-			recolorMaze();
-			addEnemies();
-			addCoins();
+			ChangeColorMaze();
+			AddMonsters();
+			AddFood();
 		}
 		else
 		{
@@ -333,6 +338,61 @@ public:
 	//	}
 	//}
 
+	// A function to calculate the Distance between two Cells
+
+	void movePacman(Cell* target)
+	{
+		Cell* temp = nullptr;
+		pacmanPQ.push(pacman);
+		while (!pacmanPQ.empty())
+		{
+			temp = pacmanPQ.top();
+			pacmanPQ.pop();
+
+			if (temp->GetRow() == target->GetRow() && temp->GetColumn() == target->GetColumn())
+				break;
+
+			graysIterator = find(graysVector.begin(), graysVector.end(), temp);
+			if (graysIterator != graysVector.end())
+				graysVector.erase(graysIterator);
+			blacksVector.push_back(temp);
+
+			checkSide(0, -1, temp, PACMAN, 0);
+			checkSide(0, 1, temp, PACMAN, 0);
+			checkSide(-1, 0, temp, PACMAN, 0);
+			checkSide(1, 0, temp, PACMAN, 0);
+		}
+
+		while (true)
+		{
+			temp = temp->GetParent();
+			if (temp->GetParent()->GetIdentity() == PACMAN)
+				break;
+		}
+		temp->SetIdentity(PACMAN);
+		if (temp->IsCoin())
+			temp->SetCoin(false);
+
+		pacman = temp;
+		temp = temp->GetParent();
+
+		maze[temp->GetRow()][temp->GetColumn()]->SetIdentity(SPACE);
+
+		if (Distance(pacman, target) == 1)
+		{
+			target->SetCoin(false);
+			pacmanPoints += 1;
+			cout << "Yey! Pacman ete one coin and won " << pacmanPoints * 100 << " points" << endl;
+			if (pacmanPoints == NUM_OF_COINS)
+				pacmanWon = true;
+		}
+
+		blacksVector.clear();
+		graysVector.clear();
+
+
+	}
+
 	double Distance(Cell* n1, Cell* n2)
 	{
 		int x1 = n1->GetRow();
@@ -342,16 +402,94 @@ public:
 		return sqrt((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2));
 	}
 
+	double assertSafety(Cell* np)
+	{
+		int i;
+		double risk = 0;
+		for (i = 0; i < NUM_OF_GHOSTS; i++)
+		{
+			risk += Distance(np, ghosts[i]);
+		}
+		risk -= 3 * Distance(np, pacman);
+		if (Distance(np, pacman) < 1.3)
+			risk = -DBL_MAX;
+		return risk;
+	}
+
+	void coinsValue()
+	{
+		int i, j;
+		double safety;
+		bool foundCoin = false;
+		for (i = 0; i < MSZ; i++)
+		{
+			for (j = 0; j < MSZ; j++)
+			{
+				if (maze[i][j]->IsCoin())
+				{
+					foundCoin = true;
+					safety = assertSafety(maze[i][j]);
+					maze[i][j]->SetSafeDistance(safety);
+					safeDistancePQ.push(maze[i][j]);
+				}
+			}
+		}
+
+		if (!foundCoin)
+			pacmanWon = true;
+	}
+
+	void PlayPacman(Cell* character)
+	{
+		Cell* target, * oldTarget = nullptr;
+		pacmanVector.push_back(pacman);
+		coinsValue();
+		if (pacmanWon)
+			return;
+		target = safeDistancePQ.top();
+		if (oldTarget != nullptr)
+		{
+			if (target->GetSafeDistance() < oldTarget->GetSafeDistance())
+				movePacman(oldTarget);
+		}
+		else
+			movePacman(target);
+		oldTarget = target;
+
+		pacmanVector.clear();
+		markedCells.clear();
+		while (!pacmanPQ.empty())
+			pacmanPQ.pop();
+		while (!safeDistancePQ.empty())
+			safeDistancePQ.pop();
+
+	}
+
+	void Play(Cell* character, int i)
+	{
+		if (i < NUM_OF_GHOSTS)
+		{
+			if (i == 0)
+				PlayGhost(character, i, GHOST_1);
+			if (i == 1)
+				PlayGhost(character, i, GHOST_2);
+			if (i == 2)
+				PlayGhost(character, i, GHOST_3);
+		}
+		else
+			PlayPacman(character);
+	}
+
 	void turn()
 	{
-		//int i;
-		//if (!ghostsWin && !pacmanWin)
-		//{
-		//	for (i = 0; i < NUM_OF_GHOSTS && !ghostsWin && !pacmanWin; i++)
-		//		Play(ghosts[i], i);
-		//	if (!ghostsWin && !pacmanWin)
-		//		Play(pacman, NUM_OF_GHOSTS + 1);
-		//}
+		int i;
+		if (!ghostsWon && !pacmanWon)
+		{
+			for (i = 0; i < NUM_OF_GHOSTS && !ghostsWon && !pacmanWon; i++)
+				Play(ghosts[i], i);
+			if (!ghostsWon && !pacmanWon)
+				Play(pacman, NUM_OF_GHOSTS + 1);
+		}
 
 	}
 

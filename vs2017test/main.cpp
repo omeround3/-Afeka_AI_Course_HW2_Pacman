@@ -54,10 +54,10 @@ void menu(int choice)
 	switch (choice)
 	{
 	case 0: // Continue one step in the game
-		//if (!game->IsGhostWon() && !game->IsPacmanWon())
+		if (!game->IsGhostWon() && !game->IsPacmanWon())
 		break;
 	case 1: // Continue the game until a win 
-		//while (!game->IsGhostWon() && !game->IsPacmanWon())
+		while (!game->IsGhostWon() && !game->IsPacmanWon())
 		break;
 	}
 }
