@@ -64,7 +64,7 @@ void menu(int choice)
 		}
 		break;
 	case 2: // Restart the Game
-		init();
+		srand(time(0));
 		game = new Game();
 		display();
 		break;

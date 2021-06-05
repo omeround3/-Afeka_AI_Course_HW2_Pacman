@@ -17,9 +17,11 @@ const int NUM_NODES = 200;
 const int NUM_OF_COINS = 6;
 const int NUM_OF_GHOSTS = 3;
 const double STEP_PENALTY = 0.3;
+const double DISTANCE_THRESHOLD = 1.3;
 const int BIG_NUMBER = 5000;
 const int SENSE_POWER = MSZ / 2;
 const int MAX_ITERATIONS = 60;
+
 
 
 
@@ -129,7 +131,6 @@ public:
 		pacman = new Cell(maze[i][j]); 
 		pacmanVector.push_back(pacman);
 
-		//pqA_star.push(start); // the start cell for A Star priority queue
 	}
 
 	// A function to chnage the Maze BLACK Cells to SPACE and SPACE to WALL
@@ -168,7 +169,7 @@ public:
 	}
 
 	// This functions add the Monsters to the Maze
-	void AddMonsters()
+	void AddGhosts()
 	{
 		int i, j, k;
 		for (k = 0; k < NUM_OF_GHOSTS; k++)
@@ -223,7 +224,7 @@ public:
 			}
 			fairGame = false;
 			ChangeColorMaze();
-			AddMonsters();
+			AddGhosts();
 			AddFood();
 		}
 		else
@@ -318,43 +319,57 @@ public:
 	}
 	
 	// A function to check if the Cell's identity is GHOST
-	bool IsGhost(int value)
+	bool IsGhost(int ghostValue)
 	{
-		if (value == GHOST_1 || value == GHOST_2 || value == GHOST_3)
+		if (ghostValue == GHOST_1 || ghostValue == GHOST_2 || ghostValue == GHOST_3)
 			return true;
 		return false;
 	}
 
 	// A function to check the neighbor cells
-	void checkNeighboring(int horizontalOffset, int verticalOffset, Cell* temp, int value, int ghostNumber)
+	void CheckNeighbors(int horizontalOffset, int verticalOffset, Cell* temp, int ghostValue, int ghostNumber)
 	{
 		Cell* otherTemp;
 
+		// Get the Cell with the correspoding offset
 		otherTemp = maze[temp->GetRow() + horizontalOffset][temp->GetColumn() + verticalOffset];
+		// Find that Cell in the blacks Vector
 		blacksIterator = find(blacksVector.begin(), blacksVector.end(), otherTemp);
+		// Find that Cell in the grays Vector
 		graysIterator = find(graysVector.begin(), graysVector.end(), otherTemp);
+		// Check if the Cell is not a WALL, and if it was the last element on both blacks and grays Vector
+		// Also, verify the Cell is not a Ghost
 		if (otherTemp->GetIdentity() != WALL && graysIterator == graysVector.end() && blacksIterator == blacksVector.end() && !IsGhost(otherTemp->GetIdentity()))
 		{
+			// Set the Neighboring Cell's parent to the Ghost
 			otherTemp->SetParent(temp);
+			// Push the Neighboring Cell to the grays Vector
 			graysVector.push_back(otherTemp);
+			// Set the Neighboring Cell G to the Ghost's G + some step penalty
 			otherTemp->SetG(temp->GetG() + STEP_PENALTY);
-			if (IsGhost(value))
+			if (IsGhost(ghostValue))
 			{
+				// Set the Neighboring Cell H to the Distance between the Ghost
+				// and the Neighboring Cell
 				otherTemp->SetH(Distance(ghosts[ghostNumber], otherTemp));
-				ghostsPQ.push(otherTemp);
+				ghostsPQ.push(otherTemp); // Push Neighbor to ghosts Priorty Queue
 			}
-			else if (value == PACMAN)
+			else if (ghostValue == PACMAN)
 			{
+				// if the value is Pacman, set the H to the Distance between pacman and the neighbor
 				otherTemp->SetH(Distance(pacman, otherTemp));
 				pacmanPQ.push(otherTemp);
 			}
 		}
 	}
 
+	// This functions moves the Pacman character to the next cell which is closer to some Food
 	void MovePacman(Cell* target)
 	{
 		Cell* temp = nullptr;
+		// Push pacman Cell to the pacman Priorty Queue
 		pacmanPQ.push(pacman);
+
 		while (!pacmanPQ.empty())
 		{
 			temp = pacmanPQ.top();
@@ -368,10 +383,10 @@ public:
 				graysVector.erase(graysIterator);
 			blacksVector.push_back(temp);
 
-			checkNeighboring(0, -1, temp, PACMAN, 0);
-			checkNeighboring(0, 1, temp, PACMAN, 0);
-			checkNeighboring(-1, 0, temp, PACMAN, 0);
-			checkNeighboring(1, 0, temp, PACMAN, 0);
+			CheckNeighbors(0, -1, temp, PACMAN, 0);
+			CheckNeighbors(0, 1, temp, PACMAN, 0);
+			CheckNeighbors(-1, 0, temp, PACMAN, 0);
+			CheckNeighbors(1, 0, temp, PACMAN, 0);
 		}
 
 		while (true)
@@ -404,10 +419,13 @@ public:
 
 	}
 
-	void moveGhost(int ghostNumber, int value)
+
+	// This functions moves the Ghost character to the next cell which is closer to Pacman
+	void MoveGhost(int ghostNumber, int ghostValue)
 	{
 		Cell* temp = nullptr;
 
+		// Pop a ghost from the ghosts Priorty Queue and check its neighbors
 		while (!ghostsPQ.empty())
 		{
 			temp = ghostsPQ.top();
@@ -415,25 +433,28 @@ public:
 
 			if (temp->GetIdentity() == PACMAN)
 				break;
-
+			// Return an iterator to the first element in the range given that compares equal
+			// to the temp Cell. If no such element is found, the function returns the last element.
 			graysIterator = find(graysVector.begin(), graysVector.end(), temp);
+			// If the element returned is not the last element, erase is from the vector
 			if (graysIterator != graysVector.end())
 				graysVector.erase(graysIterator);
+			// Push the temp Cell to the blacks Vector
 			blacksVector.push_back(temp);
 
-			checkNeighboring(0, -1, temp, value, ghostNumber);
-			checkNeighboring(0, 1, temp, value, ghostNumber);
-			checkNeighboring(-1, 0, temp, value, ghostNumber);
-			checkNeighboring(1, 0, temp, value, ghostNumber);
+			CheckNeighbors(0, -1, temp, ghostValue, ghostNumber);
+			CheckNeighbors(0, 1, temp, ghostValue, ghostNumber);
+			CheckNeighbors(-1, 0, temp, ghostValue, ghostNumber);
+			CheckNeighbors(1, 0, temp, ghostValue, ghostNumber);
 		}
 
 		while (true)
 		{
 			temp = temp->GetParent();
-			if (temp->GetParent()->GetIdentity() == value)
+			if (temp->GetParent()->GetIdentity() == ghostValue)
 				break;
 		}
-		temp->SetIdentity(value);
+		temp->SetIdentity(ghostValue);
 
 		ghosts[ghostNumber] = temp;
 		temp = temp->GetParent();
@@ -455,20 +476,29 @@ public:
 		return sqrt((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2));
 	}
 
-	double assertSafety(Cell* np)
+	// This functions check the Distance between the coin/food cell and all the Ghosts
+	// And calculates the risk to move to this coin
+	// The distance between Pacman and the coin is also considered in the calculation.
+	// 
+	double assertSafety(Cell* coinCell)
 	{
 		int i;
 		double risk = 0;
+		// Sum the distances between the coins and the ghosts
 		for (i = 0; i < NUM_OF_GHOSTS; i++)
 		{
-			risk += Distance(np, ghosts[i]);
+			risk += Distance(coinCell, ghosts[i]);
 		}
-		risk -= 3 * Distance(np, pacman);
-		if (Distance(np, pacman) < 1.3)
+		// If the Distance between the coin and Pacman is smaller then DISTANCE_THRESHOLD
+		// Else, reduce the distance between pacman and the coin, multiplied by 3 for safety
+		if (Distance(coinCell, pacman) < DISTANCE_THRESHOLD)
 			risk = -DBL_MAX;
+		else
+			risk -= 3 * Distance(coinCell, pacman);
 		return risk;
 	}
 
+	// This function calculates the distances to each coin/food in the game from ghosts and pacman
 	void CoinsValue()
 	{
 		int i, j;
@@ -481,13 +511,16 @@ public:
 				if (maze[i][j]->IsCoin())
 				{
 					foundCoin = true;
+					// Calculate the safe distance for the coin Cell
 					safeDistance = assertSafety(maze[i][j]);
+					// Set the coin Cell's Safe Distance
 					maze[i][j]->SetSafeDistance(safeDistance);
 					safeDistancePQ.push(maze[i][j]);
 				}
 			}
 		}
 
+		// If no coins are found, then Pacman ate them all 
 		if (!foundCoin)
 		{
 			pacmanWon = true;
@@ -495,31 +528,46 @@ public:
 		}
 	}
 
-	void PlayGhost(Cell* character, int i, int ghostValue)
+	// This function plays a Ghost character; The steps are 
+	// 1. Calculate the distance between the Ghost and Pacman; If it is 1, then Ghosts win
+	// 2. Else, the Ghost is moved to the next cell which is closer to Pacman
+	void PlayGhost(Cell* character, int ghostNumber, int ghostValue)
 	{
+		// Calculate the distance between a Ghost to Pacman
 		double distance = Distance(character, pacman);
+		// If the distance equals 1, the Ghosts won the game
 		if (distance == 1)
 		{
 			ghostsWon = true;
 			cout << "The Ghosts won the game! Pacman is dead." << endl;
 			return;
 		}
-
-		character->SetH(distance);
-		ghostsPQ.push(character);
-		moveGhost(i, ghostValue);
-		while (!ghostsPQ.empty())
-			ghostsPQ.pop();
-
+		// Else, set the Ghost H value and push it to the ghosts Priorty Queue
+		// Then, move the ghost to the next cell and clear the ghosts Priorty Queue
+		else 
+		{
+			character->SetH(distance);
+			ghostsPQ.push(character);
+			MoveGhost(ghostNumber, ghostValue);
+			while (!ghostsPQ.empty())
+				ghostsPQ.pop();
+		}
 	}
 
+	// This function plays a Pacman character; The steps are 
+	// 1. Calculate the distance between the Ghost and Pacman; If it is 1, then Ghosts win
+	// 2. Else, the Ghost is moved to the next cell which is closer to Pacman
 	void PlayPacman(Cell* character)
 	{
 		Cell* target, * oldTarget = nullptr;
 		pacmanVector.push_back(pacman);
-		CoinsValue();
+		CoinsValue(); // Calculates coin distances
+		// After the CoinsValue calculatio, there is a chance that no more coins exist
+		// In this case, Pacman won and the flag is changed.
 		if (pacmanWon)
 			return;
+		// If pacman hasn't won yet, get a target coin from the safeDistance Priority Queue
+		// with the lowest risk (the lowest risk coin will be returned by top()
 		target = safeDistancePQ.top();
 		if (oldTarget != nullptr)
 		{
