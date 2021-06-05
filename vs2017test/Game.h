@@ -17,7 +17,7 @@ const int NUM_NODES = 200;
 const int NUM_OF_COINS = 6;
 const int NUM_OF_GHOSTS = 3;
 const double STEP_PENALTY = 0.3;
-const double DISTANCE_THRESHOLD = 1.3;
+const double DISTANCE_THRESHOLD = 1.2;
 const int BIG_NUMBER = 5000;
 const int SENSE_POWER = MSZ / 2;
 const int MAX_ITERATIONS = 60;
@@ -30,13 +30,11 @@ class Game
 
 private:
 	// Declare global variables
-	bool runA_star = false;  // Boolean to indicate if we use the A Star algorithm
 	int steps_num = 0;
 	int pacmanPoints = 0;
 	bool pacmanWon = false;
 	bool ghostsWon = false;
 	bool fairGame = true;
-	bool keepSearching = true;
 
 
 
@@ -65,25 +63,20 @@ public:
 	Game();
 
 	// Getters
-	int GetRunA_star() { return runA_star; }
 	int GetSteps() { return steps_num; }
 	int GetPacmanPoints() { return pacmanPoints; }
 	bool IsPacmanWon() { return pacmanWon; }
 	bool IsGhostWon() { return ghostsWon; }
 	bool IsFairGame() { return fairGame; }
-	bool IsKeepSearching() { return keepSearching; }
 
 	// Setters
-	void SetRunA_star(bool flag) { this->runA_star = flag; }
 	void SetSteps(int steps) { this->steps_num = steps; }
 	void SetPacmanPoints(int points) { this->pacmanPoints = points; }
 	void SetPacmanWon(bool flag) { this->pacmanWon = flag; }
 	void SetGhostsWon(bool flag) { this->ghostsWon = flag; }
 	void SetFairGame(bool flag) { this->fairGame = flag; }
-	void SetKeepSearching(bool flag) { this->keepSearching = flag; }
 
-	// Functions
-
+	/* This section is all the game methods */
 
 	// The function will initialize the maze borders and also the cells
 	void InitMaze()
@@ -382,7 +375,8 @@ public:
 			if (graysIterator != graysVector.end())
 				graysVector.erase(graysIterator);
 			blacksVector.push_back(temp);
-
+			
+			// Check the cells: up, down, left, right
 			CheckNeighbors(0, -1, temp, PACMAN, 0);
 			CheckNeighbors(0, 1, temp, PACMAN, 0);
 			CheckNeighbors(-1, 0, temp, PACMAN, 0);
@@ -442,6 +436,7 @@ public:
 			// Push the temp Cell to the blacks Vector
 			blacksVector.push_back(temp);
 
+			// Check the cells: up, down, left, right
 			CheckNeighbors(0, -1, temp, ghostValue, ghostNumber);
 			CheckNeighbors(0, 1, temp, ghostValue, ghostNumber);
 			CheckNeighbors(-1, 0, temp, ghostValue, ghostNumber);
@@ -490,7 +485,9 @@ public:
 			risk += Distance(coinCell, ghosts[i]);
 		}
 		// If the Distance between the coin and Pacman is smaller then DISTANCE_THRESHOLD
-		// Else, reduce the distance between pacman and the coin, multiplied by 3 for safety
+		// The DISTANCE_THRESHOLD can be any value bigger than 1, which means there is some risk.
+		// Else, reduce the distance between pacman and the coin, multiplied by the number 
+		// of Ghosts (3) for safety
 		if (Distance(coinCell, pacman) < DISTANCE_THRESHOLD)
 			risk = -DBL_MAX;
 		else
@@ -498,8 +495,8 @@ public:
 		return risk;
 	}
 
-	// This function calculates the distances to each coin/food in the game from ghosts and pacman
-	void CoinsValue()
+	// This function calculates the risk to each coin/food in the game from ghosts and pacman
+	void CoinsRisk()
 	{
 		int i, j;
 		double safeDistance;
@@ -524,7 +521,7 @@ public:
 		if (!foundCoin)
 		{
 			pacmanWon = true;
-			cout << "PACMAN WON THE GAME! Yey!" << endl;
+			cout << "PACMAN WON THE GAME! Yey! Numbers of Steps: " << this->GetSteps() << endl;
 		}
 	}
 
@@ -539,7 +536,7 @@ public:
 		if (distance == 1)
 		{
 			ghostsWon = true;
-			cout << "The Ghosts won the game! Pacman is dead." << endl;
+			cout << "The Ghosts won the game! Pacman is dead. Numbers of Steps: " << this->GetSteps() << endl;
 			return;
 		}
 		// Else, set the Ghost H value and push it to the ghosts Priorty Queue
@@ -557,12 +554,12 @@ public:
 	// This function plays a Pacman character; The steps are 
 	// 1. Calculate the distance between the Ghost and Pacman; If it is 1, then Ghosts win
 	// 2. Else, the Ghost is moved to the next cell which is closer to Pacman
-	void PlayPacman(Cell* character)
+	void PlayPacman()
 	{
 		Cell* target, * oldTarget = nullptr;
 		pacmanVector.push_back(pacman);
-		CoinsValue(); // Calculates coin distances
-		// After the CoinsValue calculatio, there is a chance that no more coins exist
+		CoinsRisk(); // Calculates coin distances
+		// After the CoinsRisk calculatio, there is a chance that no more coins exist
 		// In this case, Pacman won and the flag is changed.
 		if (pacmanWon)
 			return;
@@ -587,8 +584,10 @@ public:
 
 	}
 
+	// Play each character once
 	void Play(Cell* character, int i)
 	{
+		this->SetSteps(this->GetSteps() + 1);
 		if (i < NUM_OF_GHOSTS)
 		{
 			if (i == 0)
@@ -599,18 +598,20 @@ public:
 				PlayGhost(character, i, GHOST_3);
 		}
 		else
-			PlayPacman(character);
+			PlayPacman();
 	}
 
+	// This functions invokes one Play turn for each character
+	// In other words, it advances the game by one move
 	void turn()
 	{
-		int i;
+		int i; // ghost number
 		if (!ghostsWon && !pacmanWon)
 		{
 			for (i = 0; i < NUM_OF_GHOSTS && !ghostsWon && !pacmanWon; i++)
 				Play(ghosts[i], i);
 			if (!ghostsWon && !pacmanWon)
-				Play(pacman, NUM_OF_GHOSTS + 1);
+				Play(pacman, -1); // -1 is just to get into the else of Play function
 		}
 
 	}
