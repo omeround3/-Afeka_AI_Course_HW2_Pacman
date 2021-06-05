@@ -87,7 +87,7 @@ public:
 	void InitMaze()
 	{
 		int i, j;
-
+		srand(time(0));
 		for (i = 0; i < MSZ; i++)
 			for (j = 0; j < MSZ; j++) {
 				maze[i][j] = new Cell();
@@ -316,29 +316,8 @@ public:
 				glEnd();
 			}
 	}
-
-	// Searches for a specific cell in the Cells queue and if exists return it
-	Cell* getCell(int row, int col, vector <Cell*>* grays)
-	{
-		for (Cell* cell : *grays)
-		{
-			if (cell->GetRow() == row && cell->GetColumn() == col) { return cell; }
-		}
-		return nullptr;
-	}
-
-	// This function will build and restore the path from START to TARGET
-	//void RestorePath(Cell* pcurrent)
-	//{
-	//	while (pcurrent->GetParent() != nullptr)
-	//	{
-	//		maze[pcurrent->GetRow()][pcurrent->GetColumn()] = PATH;
-	//		pcurrent = pcurrent->GetParent();
-	//		steps_num++; // increase number of steps to rebuild path from target to source cell
-	//	}
-	//}
-
 	
+	// A function to check if the Cell's identity is GHOST
 	bool IsGhost(int value)
 	{
 		if (value == GHOST_1 || value == GHOST_2 || value == GHOST_3)
@@ -346,7 +325,8 @@ public:
 		return false;
 	}
 
-	void checkSide(int horizontalOffset, int verticalOffset, Cell* temp, int value, int ghostNumber)
+	// A function to check the neighbor cells
+	void checkNeighboring(int horizontalOffset, int verticalOffset, Cell* temp, int value, int ghostNumber)
 	{
 		Cell* otherTemp;
 
@@ -388,10 +368,10 @@ public:
 				graysVector.erase(graysIterator);
 			blacksVector.push_back(temp);
 
-			checkSide(0, -1, temp, PACMAN, 0);
-			checkSide(0, 1, temp, PACMAN, 0);
-			checkSide(-1, 0, temp, PACMAN, 0);
-			checkSide(1, 0, temp, PACMAN, 0);
+			checkNeighboring(0, -1, temp, PACMAN, 0);
+			checkNeighboring(0, 1, temp, PACMAN, 0);
+			checkNeighboring(-1, 0, temp, PACMAN, 0);
+			checkNeighboring(1, 0, temp, PACMAN, 0);
 		}
 
 		while (true)
@@ -424,7 +404,7 @@ public:
 
 	}
 
-	void moveGhost(int i, int value)
+	void moveGhost(int ghostNumber, int value)
 	{
 		Cell* temp = nullptr;
 
@@ -441,10 +421,10 @@ public:
 				graysVector.erase(graysIterator);
 			blacksVector.push_back(temp);
 
-			checkSide(0, -1, temp, value, i);
-			checkSide(0, 1, temp, value, i);
-			checkSide(-1, 0, temp, value, i);
-			checkSide(1, 0, temp, value, i);
+			checkNeighboring(0, -1, temp, value, ghostNumber);
+			checkNeighboring(0, 1, temp, value, ghostNumber);
+			checkNeighboring(-1, 0, temp, value, ghostNumber);
+			checkNeighboring(1, 0, temp, value, ghostNumber);
 		}
 
 		while (true)
@@ -455,7 +435,7 @@ public:
 		}
 		temp->SetIdentity(value);
 
-		ghosts[i] = temp;
+		ghosts[ghostNumber] = temp;
 		temp = temp->GetParent();
 
 
@@ -521,10 +501,10 @@ public:
 		if (distance == 1)
 		{
 			ghostsWon = true;
+			cout << "The Ghosts won the game! Pacman is dead." << endl;
 			return;
 		}
-		if (ghostsWon)
-			return;
+
 		character->SetH(distance);
 		ghostsPQ.push(character);
 		moveGhost(i, ghostValue);

@@ -63,6 +63,11 @@ void menu(int choice)
 			display();
 		}
 		break;
+	case 2: // Restart the Game
+		init();
+		game = new Game();
+		display();
+		break;
 	}
 }
 
@@ -85,6 +90,7 @@ void main(int argc, char* argv[])
 	glutCreateMenu(menu);
 	glutAddMenuEntry("Continue - One Step", 0);
 	glutAddMenuEntry("Run Till End of Game", 1);
+	glutAddMenuEntry("Restart Game", 2);
 	glutAttachMenu(GLUT_RIGHT_BUTTON);
 
 	
