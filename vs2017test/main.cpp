@@ -1,11 +1,16 @@
 /*
-	A program to demonstrate Bidirectional BFS search from START point to TARGET point.
-	The program will start a BFS algorithm from the START point and from the TARGET point and the same time.
-	The output is the shortest path from the START point to the TARGET point.
+	A program to demonstrate the Pacman game.
+	********************************************************************
+	Pacman game includes 1 Pacman player and 3 Ghosts. 
+	The method for Pacman winning is to eat all the 6 coins in the maze. 
+	In contrast, the Ghosts need to catch Pacman for winning. 
+	********************************************************************
+
+
 
 	The program uses the OpenGL library; make sure to run as x86 platform.
 
-	Based on AI Course basic BFS code.
+	Based on AI Course A Star algorithm
 	
 	@Authors
 	Tal Hagag - 313160921
